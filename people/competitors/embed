@@ -1,0 +1,119 @@
+<style>
+#dataFeed table {
+    border: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+#dataFeed th.sortable {
+    background-color: #4E9FD4;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: normal;
+    margin: 0;
+    padding: 2px 10px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#dataFeed th.sortable:hover {
+    background-color: #4e5cd4;
+}
+
+#dataFeed th.sorted-asc, th.sorted-desc {
+    background-color: #2f87c0;
+}
+
+#dataFeed td {
+    margin: 0;
+    padding: 2px 10px;
+}
+
+#dataFeed td.odd {
+    background-color: #cae2f2;
+}
+</style>
+
+<div style="text-align:left; font-family: Arial, Helvetica, sans-serif; font-weight: bold;">
+<label for="filter">Search this years competitors </label><input type="text" name="dataFeedFilter" value="" id="dataFeedFilter" placeholder="Search..."/>
+</div>
+<hr />
+<p></p>
+<div id="dataFeed">Loading&#8230;</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://competitors.rcc.org.nz/feed"></script>
+<script>
+if (jQuery("#dataFeed").length > 0) {  
+    jQuery("#dataFeed").html(feed);
+    jQuery('#dataFeed tbody tr').addClass('visible'); // Default each row to visible
+    dataFeedStripeRows();
+    jQuery('#dataFeedFilter').keydown(function (event) {
+      if (event.keyCode == 13) {
+        event.preventDefault();
+      }
+    });
+    jQuery('#dataFeedFilter').keyup(function (event) {
+      var query = jQuery(this).val();
+      if (event.keyCode == 27 || query == '') { // Esc or nothing
+        jQuery(this).val('');
+        jQuery('#dataFeed tbody tr').removeClass('visible').show().addClass('visible');
+      } else {
+        query = jQuery.trim(query); //trim white space
+        query = query.replace(/ /gi, '|'); //add OR for regex
+        jQuery('#dataFeed tbody tr').each(function () {
+          (jQuery(this).text().search(new RegExp(query, "i")) < 0) ? jQuery(this).hide().removeClass('visible') : jQuery(this).show().addClass('visible');
+        });
+      }
+      dataFeedStripeRows();
+    });
+    // Grab all header rows
+    jQuery('#dataFeed thead th').each(function (column) {
+      jQuery(this).addClass('sortable')
+      .click(function () {
+        var findSortKey = function ($cell) {
+          return $cell.find('.sort-key').text().toUpperCase() + ' ' + $cell.text().toUpperCase();
+        };
+        var sortDirection = jQuery(this).is('.sorted-asc') ? -1 : 1;
+        // Step back up the tree and get the rows with data for sorting
+        var $rows = jQuery(this).parent()
+          .parent()
+          .parent()
+          .find('tbody tr')
+          .get();
+        // Loop through all the rows and find
+        jQuery.each($rows, function (index, row) {
+          row.sortKey = findSortKey(jQuery(row).children('td').eq(column));
+        });
+        // Compare and sort the rows alphabetically
+        $rows.sort(function (a, b) {
+          if (a.sortKey < b.sortKey)
+            return -sortDirection;
+          if (a.sortKey > b.sortKey)
+            return sortDirection;
+          return 0;
+        });
+        // Add the rows in the correct order to the bottom of the table
+        jQuery.each($rows, function (index, row) {
+          jQuery('#dataFeed tbody').append(row);
+          row.sortKey = null;
+        });
+        // Identify the column sort order
+        jQuery('#dataFeed th').removeClass('sorted-asc sorted-desc');
+        var $sortHead = jQuery('th').filter(':nth-child(' + (column + 1) + ')');
+        sortDirection == 1 ? $sortHead.addClass('sorted-asc') : $sortHead.addClass('sorted-desc');
+        // Identify the column to be sorted by
+        jQuery('#dataFeed td').removeClass('sorted')
+        .filter(':nth-child(' + (column + 1) + ')')
+        .addClass('sorted');
+        dataFeedStripeRows();
+      });
+    });
+}
+function dataFeedStripeRows() {
+  jQuery('.visible td').removeClass('odd');
+  jQuery('.visible:odd td').removeClass('odd').addClass('odd');
+}
+</script>
